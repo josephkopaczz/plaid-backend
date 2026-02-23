@@ -1,10 +1,24 @@
 require('dotenv').config();
 const express = require('express');
+const cors = require('cors');
 const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
 const app = express();
+
+/* === CORS НАСТРОЙКА === */
+app.use(cors({
+  origin: [
+    'https://kbdbs.online',
+    'https://www.kbdbs.online',
+    'https://ap.www.namecheap.com'
+  ],
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
+
 app.use(express.json());
 
+/* === PLAID CONFIG === */
 const configuration = new Configuration({
   basePath: PlaidEnvironments.production,
   baseOptions: {
@@ -17,6 +31,7 @@ const configuration = new Configuration({
 
 const client = new PlaidApi(configuration);
 
+/* === CREATE LINK TOKEN === */
 app.post('/create_link_token', async (req, res) => {
   try {
     const response = await client.linkTokenCreate({
@@ -28,11 +43,14 @@ app.post('/create_link_token', async (req, res) => {
     });
 
     res.json({ link_token: response.data.link_token });
+
   } catch (err) {
+    console.error(err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
 
+/* === EXCHANGE TOKEN === */
 app.post('/exchange_token', async (req, res) => {
   try {
     const response = await client.itemPublicTokenExchange({
@@ -40,11 +58,14 @@ app.post('/exchange_token', async (req, res) => {
     });
 
     res.json({ access_token: response.data.access_token });
+
   } catch (err) {
+    console.error(err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
 
+/* === HEALTH CHECK === */
 app.get('/', (req, res) => {
   res.send('Plaid backend running');
 });
