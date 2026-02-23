@@ -5,22 +5,21 @@ const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
 const app = express();
 
-/* === CORS НАСТРОЙКА === */
+/* ===== CORS ===== */
 app.use(cors({
   origin: [
     'https://kbdbs.online',
     'https://www.kbdbs.online',
-    'https://ap.www.namecheap.com'
+    'http://localhost:3000'
   ],
   methods: ['GET', 'POST'],
-  credentials: true
 }));
 
 app.use(express.json());
 
-/* === PLAID CONFIG === */
+/* ===== PLAID CONFIG ===== */
 const configuration = new Configuration({
-  basePath: PlaidEnvironments.production,
+  basePath: PlaidEnvironments.production, // если нужно тестировать — поменяй на sandbox
   baseOptions: {
     headers: {
       'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
@@ -31,13 +30,15 @@ const configuration = new Configuration({
 
 const client = new PlaidApi(configuration);
 
-/* === CREATE LINK TOKEN === */
+/* ===== CREATE LINK TOKEN ===== */
 app.post('/create_link_token', async (req, res) => {
   try {
     const response = await client.linkTokenCreate({
-      user: { client_user_id: 'user-' + Date.now() },
+      user: {
+        client_user_id: 'user-' + Date.now(),
+      },
       client_name: 'KBDBS Lending',
-      products: ['transactions', 'balance', 'identity'],
+      products: ['transactions', 'identity'], // balance убрали
       country_codes: ['US'],
       language: 'en',
     });
@@ -45,30 +46,53 @@ app.post('/create_link_token', async (req, res) => {
     res.json({ link_token: response.data.link_token });
 
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error('CREATE LINK TOKEN ERROR:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
 
-/* === EXCHANGE TOKEN === */
+/* ===== EXCHANGE TOKEN ===== */
 app.post('/exchange_token', async (req, res) => {
   try {
     const response = await client.itemPublicTokenExchange({
       public_token: req.body.public_token,
     });
 
-    res.json({ access_token: response.data.access_token });
+    const access_token = response.data.access_token;
+
+    res.json({ access_token });
 
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error('EXCHANGE TOKEN ERROR:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
 
-/* === HEALTH CHECK === */
+/* ===== GET TRANSACTIONS ===== */
+app.post('/get_transactions', async (req, res) => {
+  try {
+    const { access_token } = req.body;
+
+    const transactionsResponse = await client.transactionsGet({
+      access_token,
+      start_date: '2024-01-01',
+      end_date: new Date().toISOString().split('T')[0],
+    });
+
+    res.json(transactionsResponse.data);
+
+  } catch (err) {
+    console.error('TRANSACTIONS ERROR:', err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
+});
+
+/* ===== HEALTH CHECK ===== */
 app.get('/', (req, res) => {
   res.send('Plaid backend running');
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Server running on port', PORT));
+app.listen(PORT, () => {
+  console.log('Server running on port', PORT);
+});
