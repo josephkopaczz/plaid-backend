@@ -5,15 +5,8 @@ const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
 const app = express();
 
-/* ===== CORS ===== */
-app.use(cors({
-  origin: [
-    'https://kbdbs.online',
-    'https://www.kbdbs.online',
-    'http://localhost:3000'
-  ],
-  methods: ['GET', 'POST'],
-}));
+/* ===== CORS (разрешаем всё для теста) ===== */
+app.use(cors());
 
 app.use(express.json());
 
@@ -38,7 +31,7 @@ app.post('/create_link_token', async (req, res) => {
         client_user_id: 'user-' + Date.now(),
       },
       client_name: 'KBDBS Lending',
-      products: ['transactions', 'identity'], // balance убрали
+      products: ['transactions', 'identity'], // balance не указываем
       country_codes: ['US'],
       language: 'en',
     });
@@ -93,6 +86,7 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
   console.log('Server running on port', PORT);
 });
