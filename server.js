@@ -12,7 +12,7 @@ app.use(express.json());
 
 /* ===== PLAID CONFIG ===== */
 const configuration = new Configuration({
-  basePath: PlaidEnvironments.production, // если нужно тестировать — поменяй на sandbox
+  basePath: PlaidEnvironments.sandbox, // если нужно тестировать — поменяй на sandbox
   baseOptions: {
     headers: {
       'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
@@ -90,3 +90,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log('Server running on port', PORT);
 });
+
