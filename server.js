@@ -1,30 +1,64 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
 const app = express();
 
-/* ===== CORS (разрешаем всё для теста) ===== */
 app.use(cors());
 app.use(express.json());
 
-/* ===== HEALTH CHECK ===== */
-app.get('/', (req, res) => {
-  res.send('Server is running');
+const configuration = new Configuration({
+  basePath: PlaidEnvironments.sandbox,
+  baseOptions: {
+    headers: {
+      'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
+      'PLAID-SECRET': process.env.PLAID_SECRET,
+    },
+  },
 });
 
-/* ===== TEST ENDPOINT ===== */
-app.post('/create_link_token', (req, res) => {
-  console.log("Request received at /create_link_token");
-  res.json({
-    status: "ok",
-    message: "Server works correctly",
-    time: new Date().toISOString()
-  });
+const client = new PlaidApi(configuration);
+
+app.get('/', (req, res) => {
+  res.send('Plaid backend running');
+});
+
+app.post('/create_link_token', async (req, res) => {
+  try {
+    const response = await client.linkTokenCreate({
+      user: {
+        client_user_id: 'user-' + Date.now(),
+      },
+      client_name: 'KBDBS Lending',
+      products: ['transactions', 'identity'],
+      country_codes: ['US'],
+      language: 'en',
+    });
+
+    res.json({ link_token: response.data.link_token });
+
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
+});
+
+app.post('/exchange_token', async (req, res) => {
+  try {
+    const response = await client.itemPublicTokenExchange({
+      public_token: req.body.public_token,
+    });
+
+    res.json({ access_token: response.data.access_token });
+
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).json({ error: err.response?.data || err.message });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log('Server running on port', PORT);
 });
