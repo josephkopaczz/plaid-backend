@@ -4,7 +4,6 @@ const cors = require('cors');
 const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
@@ -21,39 +20,29 @@ const configuration = new Configuration({
 const client = new PlaidApi(configuration);
 
 app.get('/', (req, res) => {
-  res.send('Plaid backend running');
+  res.send('Income test backend running');
 });
 
-app.post('/create_link_token', async (req, res) => {
+/* ==== CREATE INCOME LINK TOKEN ==== */
+app.post('/create_income_link_token', async (req, res) => {
   try {
     const response = await client.linkTokenCreate({
       user: {
         client_user_id: 'user-' + Date.now(),
       },
       client_name: 'KBDBS Lending',
-      products: ['transactions', 'identity'],
+      products: ['income_verification'],
       country_codes: ['US'],
       language: 'en',
+      income_verification: {
+        income_source_types: ['document'],
+      },
     });
 
     res.json({ link_token: response.data.link_token });
 
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
-  }
-});
-
-app.post('/exchange_token', async (req, res) => {
-  try {
-    const response = await client.itemPublicTokenExchange({
-      public_token: req.body.public_token,
-    });
-
-    res.json({ access_token: response.data.access_token });
-
-  } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error('INCOME ERROR:', err.response?.data || err.message);
     res.status(500).json({ error: err.response?.data || err.message });
   }
 });
