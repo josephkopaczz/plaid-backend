@@ -20,16 +20,23 @@ const configuration = new Configuration({
 const client = new PlaidApi(configuration);
 
 app.get('/', (req, res) => {
-  res.send('Income test backend running');
+  res.send('Income backend running');
 });
 
-/* ==== CREATE INCOME LINK TOKEN ==== */
+/* ===== CREATE INCOME LINK TOKEN (CORRECT FLOW) ===== */
 app.post('/create_income_link_token', async (req, res) => {
   try {
-    const response = await client.linkTokenCreate({
-      user: {
-        client_user_id: 'user-' + Date.now(),
-      },
+
+    // 1️⃣ Create user_token
+    const userResponse = await client.userCreate({
+      client_user_id: 'user-' + Date.now(),
+    });
+
+    const user_token = userResponse.data.user_token;
+
+    // 2️⃣ Create link_token with user_token
+    const linkResponse = await client.linkTokenCreate({
+      user_token: user_token,
       client_name: 'KBDBS Lending',
       products: ['income_verification'],
       country_codes: ['US'],
@@ -39,7 +46,10 @@ app.post('/create_income_link_token', async (req, res) => {
       },
     });
 
-    res.json({ link_token: response.data.link_token });
+    res.json({
+      link_token: linkResponse.data.link_token,
+      user_token: user_token
+    });
 
   } catch (err) {
     console.error('INCOME ERROR:', err.response?.data || err.message);
